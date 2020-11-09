@@ -71,7 +71,8 @@ const userSchema = new mongoose.Schema({
   email: String,
   password: String,
   googleId: String,
-  facebookId: String
+  facebookId: String,
+  secret: String
 });
 // setup for passport local mongoose
 userSchema.plugin(passportLocalMongoose); // i.e when we use hash and salt out password and save users into mongo db
@@ -133,11 +134,41 @@ app.get("/login", function(req, res) {
 
 app.get("/secrets", function(req, res) {
   //checks if authenticated and logs in via cookie until session ends
-  if (req.isAuthenticated()) {
-    res.render("secrets");
+  User.find({"secret": {$ne: null}}, function(err, foundUser){
+    if (err) {
+      console.log(err);
+    } else {
+      if(foundUser) {
+        res.render("secrets", {usersWithSecret: foundUser});
+      }
+    }
+  });
+});
+
+app.get("/submit", function(req, res){
+  if(req.isAuthenticated()) {
+    res.render("submit");
   } else {
     res.redirect("/login");
   }
+});
+
+app.post("/submit", function(req, res){
+  const submittedSecret = req.body.secret;
+
+  User.findById(req.user.id, function(err, foundUser){
+    if(err) {
+      console.log(err);
+    } else {
+      if(foundUser) {
+        foundUser.secret = submittedSecret;
+        foundUser.save(function(){
+          res.redirect("/secrets");
+        });
+      }
+    }
+  });
+
 });
 
 app.get("/logout", function(req, res) {
